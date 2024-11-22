@@ -1,10 +1,16 @@
 import mirdata
 import librosa
 import numpy as np
+import pandas as pd
+import tensorflow as tf
 import matplotlib.pyplot as plt
 
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, classification_report
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from scikeras.wrappers import KerasClassifier
+from sklearn.svm import SVC
 
 
 def load_data(data_home):
@@ -62,6 +68,22 @@ def split_data(tracks):
         elif track.subset == "test":
             tracks_test.append(track)
     return tracks_train, tracks_validate, tracks_test
+
+
+def check_balance(y, dataset_name):
+    y_df = pd.DataFrame(y, columns=['instrument'])
+    
+    # count the number of samples in each class
+    class_counts = y_df['instrument'].value_counts().sort_index()
+    
+    # plot the class counts
+    plt.figure(figsize=(8, 4))
+    class_counts.plot(kind='bar')
+    plt.title(f"{dataset_name} class counts")
+    plt.xlabel('instruments')
+    plt.ylabel('samples')
+    plt.show()
+
 
 
 def compute_mfccs(y, sr, n_fft=2048, hop_length=512, n_mels=128, n_mfcc=20):
@@ -295,3 +317,102 @@ def fit_knn(
     plt.show()
 
     return best_knn_clf, best_k
+
+
+def fit_random_forest(X_train, y_train, X_val, y_val):
+    """
+    Fit a random forest classifier and choose the max_depth which maximizes the
+    *f-measure* on the validation set.
+    """
+    rf = RandomForestClassifier(random_state=42)
+    rf.fit(X_train, y_train)
+
+    # 超参数调优
+    param_grid = {
+        'n_estimators': [100, 200, 300],
+        'max_depth': [None, 5, 10, 20, 30],
+        'min_samples_split': [2, 5],
+        'min_samples_leaf': [1, 2]
+    }
+
+    grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, scoring='accuracy', n_jobs=-1)
+    grid_search.fit(X_train, y_train)
+
+    # 最佳模型
+    best_rf = grid_search.best_estimator_
+    print("best hyperparameters:", grid_search.best_params_)
+
+    # 合并训练集和验证集，重新训练模型
+    X_final_train = np.concatenate((X_train, X_val))
+    y_final_train = np.concatenate((y_train, y_val))
+    best_rf.fit(X_final_train, y_final_train)
+
+    return best_rf
+
+
+def best_NN(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validate):
+    """
+    Train a neural network classifier.
+    """
+    # 数据预处理
+    num_classes = len(np.unique(Y_latent_train))
+
+    # 构建神经网络模型的函数
+    def create_model(hidden_layer_1=64, hidden_layer_2=32, dropout_rate=0.2, optimizer='adam'):
+        model = tf.keras.Sequential([
+            tf.keras.layers.InputLayer(input_shape=(X_latent_train.shape[1],)),
+            tf.keras.layers.Dense(hidden_layer_1, activation='relu'),
+            tf.keras.layers.Dropout(dropout_rate),
+            tf.keras.layers.Dense(hidden_layer_2, activation='relu'),
+            tf.keras.layers.Dropout(dropout_rate),
+            tf.keras.layers.Dense(num_classes, activation='softmax')
+        ])
+        model.compile(optimizer=optimizer,
+                    loss='sparse_categorical_crossentropy',
+                    metrics=['accuracy'])
+        return model
+
+    # 使用KerasClassifier包装模型以进行超参数调优
+    model = KerasClassifier(model=create_model, hidden_layer_1=64, hidden_layer_2=32, dropout_rate=0.2, optimizer='adam', verbose=0)
+
+    # 定义超参数网格
+    param_grid = {
+        'hidden_layer_1': [32, 64],
+        'hidden_layer_2': [16, 32],
+        'dropout_rate': [0.1, 0.2],
+        'optimizer': ['adam'],
+        'epochs': [20, 30],
+        'batch_size': [16, 32]
+    }
+
+    # 使用GridSearchCV进行超参数调优
+    grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=3, n_jobs=-1)
+    grid_result = grid.fit(X_latent_train, Y_latent_train, validation_data=(X_latent_validate, Y_latent_validate))
+    best_model = grid_result.best_estimator_
+    print("the best paprameters are:", grid_result.best_params_)
+
+    return best_model
+
+
+def best_SVM(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validate):
+    # 合并训练和验证集用于模型训练
+    X_train = np.concatenate((X_latent_train, X_latent_validate), axis=0)
+    Y_train = np.concatenate((Y_latent_train, Y_latent_validate), axis=0)
+
+    # 定义支持向量机模型和超参数网格
+    svm = SVC(probability=True)
+    param_grid = {
+        'C': [0.1, 1, 10],
+        'kernel': ['linear', 'rbf', 'poly'],
+        'gamma': ['scale', 'auto']
+    }
+
+    # 使用GridSearchCV进行超参数调优
+    grid = GridSearchCV(estimator=svm, param_grid=param_grid, cv=3, n_jobs=-1)
+    grid_result = grid.fit(X_train, Y_train)
+    best_model = grid_result.best_estimator_
+
+    # 输出最佳参数
+    print(f"the best paprameters are: {grid_result.best_params_}")
+
+    return best_model
