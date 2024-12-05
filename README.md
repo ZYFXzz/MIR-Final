@@ -1,36 +1,92 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/mI1Aciw4)
-# MPATE-GE 2623 - Music Information Retrieval
-## Homework 1
+# Comparing Audio Features for Instrument Recognition: MFCCs vs. Latent Space from the Music2Latent
+## Project Overview
 
-**Instructions:**
+**This project explores two types of audio features for musical instrument classification:**
 
-1. Complete parts 1 through 5, filling in code in the `utils.py` file where indicated **# YOUR CODE HERE** or responses in `this notebook` where marked with **# YOUR RESPONSE HERE** or **# YOUR CODE HERE**.
-2. **Document** your code. Add comments explaining what the different parts of your code are doing.
-3. If you copy code from external resources (e.g. librosa's examples), include references as comments.
-4. When finished, commit and push this completed notebook file along with the `utils.py` file to your GitHub repository corresponding to this homework.
-5. IMPORTANT: do not modify any of the provided code.
+1.	MFCC-Based Features: Traditional audio features derived from signal processing.
+2.	Latent Space Features: Extracted using the Music2Latent autoencoder, a recent model presented at ISMIR.
 
-**How to work with the `utils.py` file and Google Colab:**
+The dataset used for this project is Medley-Solos-DB, which provides labeled samples of various instrument classes. The aim is to evaluate the performance of these features across different machine learning models.
 
-You can run your code remotely with Google Colab if you add the `utils.py` file to your files' folder (search for the folder icon in the menu on the left). But **CAREFUL**, you should copy any changes you make to `utils.py` in Colab to a local copy. Each time you re-start a session the changes of any file in the files folder are lost.
-
-**Grading:**
-
-- This homework is worth 10 points.
-- Each function you code in `utils.py` is worth 1 point, for a total of 7 points.
-- Each answer in part 5 is worth 1 point, for a total of 3 points.
-- Points will be automatically assigned when passing tests, and manually assigned when it comes to your written responses.
-
-**Academic integrity:**
-
-Remember that this homework should be authored by you only. It's ok to discuss with classmates but you have to submit your own original solution.
 
 -------------------------------------------------------------
 
-## Sound Classification for Instrument Recognition
+## Workflows
 
-In this homework, we will explore the task of recognizing musical instruments based solely on their sound profiles. This involves distinguishing the nuanced tonal characteristics that each instrument produces, such as the sharp resonance of a violin versus the deep hum of a cello or the distinct timbre of a flute compared to a clarinet.
+**Part1: Data Loading and Preprocessing:**
 
-Starting from an available dataset of samples from different instruments, we will extract timbre-related features from the audio. Once processed, the data will be segmented into training, validation, and testing sets to ensure the model's robustness and generalization capabilities.
+- Dataset: Medley-Solos-DB, which includes over 20,000 labeled audio samples.
+- Further split into training, validation and testing set.
+- Check the balance of each dataset.
 
-Using a simple model, we will analyze and critic its performance, trying to explain its behaviour to be able to improve it in the future.
+The dataset is loaded using the mirdata library, which ensures structured access and metadata handling.
+
+**Part2: Feature Extrac:**
+
+MFCC Features:
+1. Computed using the Mel-Frequency Cepstral Coefficients algorithm.
+2. Statistical features such as mean and standard deviation are calculated for classification tasks.
+Latent Space Features:
+Generated using Music2Latent, which encodes audio signals into a highly compressed representation that captures timbral characteristics.
+
+
+**Part3: Normalize the Data**
+
+Normalize features with the mean and standard deviation of the training set to ensure consistency and generalization across subsets.
+
+**Part4: Model Training and Validation**
+
+Models Used:
+1. k-Nearest Neighbors (KNN): A simple and interpretable baseline.
+2. Random Forest: Handles non-linear separability and provides feature importance.
+3. Support Vector Machines (SVM): Effective in high-dimensional feature spaces.
+4. Neural Networks (NN): Captures complex, non-linear relationships.
+- Hyperparameter Tuning:
+Performed using grid search to optimize the performance of each model.
+
+**Part5: Evaluation and Analysis**
+
+Metrics:
+1. F1 Score: Macro-averaged F1 score to measure classification performance.
+2. Confusion Matrix: Visualizes misclassification patterns.
+- Error Analysis:
+Identifies the best and worst-performing classes and common misclassification trends.
+
+
+-------------------------------------------------------------
+
+## Outputs
+
+- Data Distribution:
+Displays the number of tracks in training, validation, and testing sets.
+- Feature Visualization:
+1. ummary statistics (mean and standard deviation) for MFCCs.
+2. Feature distribution for latent space representations.
+- Model Performance:
+1. F1 scores for each feature type and model.
+2. onfusion matrices for both feature types.
+- Insights:
+1. Comparison of feature effectiveness for instrument classification.
+2. Identification of common misclassification patterns.
+
+
+-------------------------------------------------------------
+
+## Example Results
+
+1.	Best Performing Features: Latent space features generally outperform MFCCs in capturing timbral differences.
+2.	Best Model: Support Vector Machines (SVM) achieve the highest accuracy with latent space features.
+3.	Error Analysis:
+- Wind instruments (e.g., flute, saxophone) often confuse the classifier due to similar timbral qualities.
+- Distinctive instruments like piano and guitar achieve the best results.
+
+
+-------------------------------------------------------------
+
+## Acknowledgments
+
+- Dataset: Medley-Solos-DB.
+- References:
+1. Music2Latent autoencoder (presented at ISMIR).
+2. Deep convolutional networks for musical instrument recognition (Lostanlen & Cella, 2016).
+- Tools: mirdata, scikit-learn, and torch.
