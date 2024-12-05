@@ -327,7 +327,7 @@ def fit_random_forest(X_train, y_train, X_val, y_val):
     rf = RandomForestClassifier(random_state=42)
     rf.fit(X_train, y_train)
 
-    # 超参数调优
+    # hyperparameters
     param_grid = {
         'n_estimators': [100, 200, 300],
         'max_depth': [None, 5, 10, 20, 30],
@@ -338,11 +338,11 @@ def fit_random_forest(X_train, y_train, X_val, y_val):
     grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, scoring='accuracy', n_jobs=-1)
     grid_search.fit(X_train, y_train)
 
-    # 最佳模型
+    # best model
     best_rf = grid_search.best_estimator_
     print("best hyperparameters:", grid_search.best_params_)
 
-    # 合并训练集和验证集，重新训练模型
+    # combine train and val data and train the best model
     X_final_train = np.concatenate((X_train, X_val))
     y_final_train = np.concatenate((y_train, y_val))
     best_rf.fit(X_final_train, y_final_train)
@@ -354,10 +354,10 @@ def best_NN(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validate
     """
     Train a neural network classifier.
     """
-    # 数据预处理
+    # preprocess
     num_classes = len(np.unique(Y_latent_train))
 
-    # 构建神经网络模型的函数
+    # build model
     def create_model(hidden_layer_1=64, hidden_layer_2=32, dropout_rate=0.2, optimizer='adam'):
         model = tf.keras.Sequential([
             tf.keras.layers.InputLayer(input_shape=(X_latent_train.shape[1],)),
@@ -372,10 +372,10 @@ def best_NN(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validate
                     metrics=['accuracy'])
         return model
 
-    # 使用KerasClassifier包装模型以进行超参数调优
+    # use KerasClassifier to find the best hyperparameters
     model = KerasClassifier(model=create_model, hidden_layer_1=64, hidden_layer_2=32, dropout_rate=0.2, optimizer='adam', verbose=0)
 
-    # 定义超参数网格
+    # define hyperparameters
     param_grid = {
         'hidden_layer_1': [32, 64],
         'hidden_layer_2': [16, 32],
@@ -385,7 +385,7 @@ def best_NN(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validate
         'batch_size': [16, 32]
     }
 
-    # 使用GridSearchCV进行超参数调优
+    # use GridSearchCV to find the best hyperparameters
     grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=3, n_jobs=-1)
     grid_result = grid.fit(X_latent_train, Y_latent_train, validation_data=(X_latent_validate, Y_latent_validate))
     best_model = grid_result.best_estimator_
@@ -395,11 +395,11 @@ def best_NN(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validate
 
 
 def best_SVM(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validate):
-    # 合并训练和验证集用于模型训练
+    # combine train and val data
     X_train = np.concatenate((X_latent_train, X_latent_validate), axis=0)
     Y_train = np.concatenate((Y_latent_train, Y_latent_validate), axis=0)
 
-    # 定义支持向量机模型和超参数网格
+    # define hyperparameters and model
     svm = SVC(probability=True)
     param_grid = {
         'C': [0.1, 1, 10],
@@ -407,12 +407,12 @@ def best_SVM(X_latent_train, Y_latent_train, X_latent_validate, Y_latent_validat
         'gamma': ['scale', 'auto']
     }
 
-    # 使用GridSearchCV进行超参数调优
+    # use GridSearchCV to find the best hyperparameters
     grid = GridSearchCV(estimator=svm, param_grid=param_grid, cv=3, n_jobs=-1)
     grid_result = grid.fit(X_train, Y_train)
     best_model = grid_result.best_estimator_
 
-    # 输出最佳参数
+    # print the best paprameters
     print(f"the best paprameters are: {grid_result.best_params_}")
 
     return best_model
